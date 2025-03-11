@@ -46,6 +46,16 @@ jobs:
   release:
     runs-on: ubuntu-latest
     needs: build
+    strategy:
+      matrix:
+        os: [Linux, Windows, macOS]
+        include:
+          - os: Linux
+            ext: ""
+          - os: Windows
+            ext: ".exe"
+          - os: macOS
+            ext: ""
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -89,7 +99,7 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v2
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -107,16 +117,6 @@ jobs:
           asset_path: artifacts/${{ env.PROJECT_NAME }}-${{ matrix.os }}/${{ env.PROJECT_NAME }}${{ matrix.ext }}
           asset_name: ${{ env.PROJECT_NAME }}-${{ steps.extract_version.outputs.version }}-${{ steps.get_date.outputs.date }}-${{ steps.get_arch.outputs.arch }}-${{ matrix.os }}${{ matrix.ext }}
           asset_content_type: application/octet-stream
-        strategy:
-          matrix:
-            os: [Linux, Windows, macOS]
-            include:
-              - os: Linux
-                ext: ""
-              - os: Windows
-                ext: ".exe"
-              - os: macOS
-                ext: ""
 # 2
 # name: Release
 
