@@ -98,38 +98,25 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload Release Assets for Linux
-        if: runner.os == 'Linux'
-        uses: actions/upload-release-asset@v2
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/${{ env.PROJECT_NAME }}-Linux/${{ env.PROJECT_NAME }}
-          asset_name: ${{ env.PROJECT_NAME }}-${{ steps.extract_version.outputs.version }}-${{ steps.get_date.outputs.date }}-${{ steps.get_arch.outputs.arch }}-Linux
+          asset_path: artifacts/${{ env.PROJECT_NAME }}-${{ matrix.os }}/${{ env.PROJECT_NAME }}${{ matrix.ext }}
+          asset_name: ${{ env.PROJECT_NAME }}-${{ steps.extract_version.outputs.version }}-${{ steps.get_date.outputs.date }}-${{ steps.get_arch.outputs.arch }}-${{ matrix.os }}${{ matrix.ext }}
           asset_content_type: application/octet-stream
-
-      - name: Upload Release Assets for Windows
-        if: runner.os == 'Windows'
-        uses: actions/upload-release-asset@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/${{ env.PROJECT_NAME }}-Windows/${{ env.PROJECT_NAME }}.exe
-          asset_name: ${{ env.PROJECT_NAME }}-${{ steps.extract_version.outputs.version }}-${{ steps.get_date.outputs.date }}-${{ steps.get_arch.outputs.arch }}-Windows.exe
-          asset_content_type: application/octet-stream
-
-      - name: Upload Release Assets for macOS
-        if: runner.os == 'macOS'
-        uses: actions/upload-release-asset@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/${{ env.PROJECT_NAME }}-macOS/${{ env.PROJECT_NAME }}
-          asset_name: ${{ env.PROJECT_NAME }}-${{ steps.extract_version.outputs.version }}-${{ steps.get_date.outputs.date }}-${{ steps.get_arch.outputs.arch }}-macOS
-          asset_content_type: application/octet-stream
+        strategy:
+          matrix:
+            os: [Linux, Windows, macOS]
+            include:
+              - os: Linux
+                ext: ""
+              - os: Windows
+                ext: ".exe"
+              - os: macOS
+                ext: ""
 # 2
 # name: Release
 
