@@ -28,6 +28,7 @@ jobs:
         run: cargo build --release
 
       - name: Package the binary
+        shell: bash # 显式指定使用 Bash
         run: |
           mkdir -p release
           if [ "$RUNNER_OS" == "Windows" ]; then
