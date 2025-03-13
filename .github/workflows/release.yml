@@ -48,12 +48,13 @@ jobs:
           NDK_ZIP="android-ndk-r25b-linux.zip"
           wget -q https://dl.google.com/android/repository/$NDK_ZIP
 
-          # 解压 NDK
-          unzip -q $NDK_ZIP -d /usr/local/lib
+          # 解压 NDK 到用户目录
+          mkdir -p $HOME/android-ndk
+          unzip -q $NDK_ZIP -d $HOME/android-ndk
           rm $NDK_ZIP
 
           # 设置环境变量
-          echo "ANDROID_NDK_HOME=/usr/local/lib/android-ndk-r25b" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$HOME/android-ndk/android-ndk-r25b" >> $GITHUB_ENV
           echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
       - name: Build the project
