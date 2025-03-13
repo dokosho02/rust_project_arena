@@ -61,7 +61,7 @@ jobs:
 
       - name: Build the project
         env:
-          RUSTFLAGS: ${{ matrix.target == 'aarch64-linux-android' && '-C link-arg=--sysroot=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot' || '' }}
+          RUSTFLAGS: "-C link-arg=--sysroot=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Package the binary
