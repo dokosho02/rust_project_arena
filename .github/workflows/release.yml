@@ -26,9 +26,6 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             ext: ""
-          # - os: ubuntu-latest
-          #   target: aarch64-linux-android
-          #   ext: ""
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,23 +36,6 @@ jobs:
           toolchain: stable
           override: true
           target: ${{ matrix.target }}
-
-      # - name: Install Android NDK (for Android target)
-      #   if: matrix.target == 'aarch64-linux-android'
-      #   run: |
-      #     # 下载 Android NDK
-      #     NDK_VERSION="25.2.9519653"
-      #     NDK_ZIP="android-ndk-r25b-linux.zip"
-      #     wget -q https://dl.google.com/android/repository/$NDK_ZIP
-
-      #     # 解压 NDK 到用户目录
-      #     mkdir -p $HOME/android-ndk
-      #     unzip -q $NDK_ZIP -d $HOME/android-ndk
-      #     rm $NDK_ZIP
-
-      #     # 设置环境变量
-      #     echo "ANDROID_NDK_HOME=$HOME/android-ndk/android-ndk-r25b" >> $GITHUB_ENV
-      #     echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
       - name: Build the project
         run: cargo build --release --target ${{ matrix.target }}
@@ -146,11 +126,25 @@ jobs:
         run: |
           upload_url=${{ steps.create_release.outputs.upload_url }}
           for target in x86_64-unknown-linux-gnu x86_64-pc-windows-msvc x86_64-apple-darwin aarch64-apple-darwin; do
-            asset_path="artifacts/${{ env.PROJECT_NAME }}-$target/${{ env.PROJECT_NAME }}${{ matrix.ext }}"
-            asset_name="${{ env.PROJECT_NAME }}-${{ steps.extract_version.outputs.version }}-${{ steps.get_date.outputs.date }}-$target${{ matrix.ext }}"
-            curl -s -X POST \
-              -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Content-Type: application/octet-stream" \
-              --data-binary @$asset_path \
-              "$upload_url?name=$asset_name"
+            if [ "$target" == "x86_64-pc-windows-msvc" ]; then
+              asset_path="artifacts/rust_project_arena-$target/rust_project_arena.exe"
+            else
+              asset_path="artifacts/rust_project_arena-$target/rust_project_arena"
+            fi
+
+            if [ -f "$asset_path" ]; then
+              asset_name="rust_project_arena-${{ steps.extract_version.outputs.version }}-${{ steps.get_date.outputs.date }}-$target"
+              if [ "$target" == "x86_64-pc-windows-msvc" ]; then
+                asset_name="$asset_name.exe"
+              fi
+
+              echo "Uploading $asset_path as $asset_name"
+              curl -s -X POST \
+                -H "Authorization: token $GITHUB_TOKEN" \
+                -H "Content-Type: application/octet-stream" \
+                --data-binary @$asset_path \
+                "$upload_url?name=$asset_name"
+            else
+              echo "Warning: File $asset_path does not exist. Skipping upload for $target."
+            fi
           done
