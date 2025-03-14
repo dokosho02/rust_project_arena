@@ -16,22 +16,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            ext: ""
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            ext: ".exe"
           - os: macos-latest
             target: x86_64-apple-darwin
+            ext: ""
           - os: macos-latest
             target: aarch64-apple-darwin
-<<<<<<< HEAD
-          - os: ubuntu-latest
-            target: aarch64-linux-android
-            use_cross: true # 标记使用 cross 工具
-=======
             ext: ""
-          # - os: ubuntu-latest
-          #   target: aarch64-linux-android
-          #   ext: ""
->>>>>>> parent of aec8528 (Flx path for windows exe in Release)
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -43,48 +37,18 @@ jobs:
           override: true
           target: ${{ matrix.target }}
 
-<<<<<<< HEAD
-      - name: Install cross (if needed)
-        if: matrix.use_cross
-        run: cargo install cross
-=======
-      # - name: Install Android NDK (for Android target)
-      #   if: matrix.target == 'aarch64-linux-android'
-      #   run: |
-      #     # 下载 Android NDK
-      #     NDK_VERSION="25.2.9519653"
-      #     NDK_ZIP="android-ndk-r25b-linux.zip"
-      #     wget -q https://dl.google.com/android/repository/$NDK_ZIP
-
-      #     # 解压 NDK 到用户目录
-      #     mkdir -p $HOME/android-ndk
-      #     unzip -q $NDK_ZIP -d $HOME/android-ndk
-      #     rm $NDK_ZIP
-
-      #     # 设置环境变量
-      #     echo "ANDROID_NDK_HOME=$HOME/android-ndk/android-ndk-r25b" >> $GITHUB_ENV
-      #     echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
->>>>>>> parent of aec8528 (Flx path for windows exe in Release)
-
       - name: Build the project
-        shell: bash
-        run: |
-          if [ "${{ matrix.use_cross }}" == "true" ]; then
-            cross build --release --target ${{ matrix.target }}
-          else
-            cargo build --release --target ${{ matrix.target }}
-          fi
+        run: cargo build --release --target ${{ matrix.target }}
 
       - name: Package the binary
         shell: bash
         run: |
           mkdir -p release
-          binary_name="${{ env.PROJECT_NAME }}"
           if [ "${{ matrix.target }}" == "x86_64-pc-windows-msvc" ]; then
-            binary_name="$binary_name.exe"
+            cp target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }}.exe release/
+          else
+            cp target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }} release/
           fi
-          cp target/${{ matrix.target }}/release/$binary_name release/
-          echo "Binary packaged: release/$binary_name"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -107,9 +71,14 @@ jobs:
       - name: Extract version from tag
         id: extract_version
         run: |
-          version=${GITHUB_REF#refs/tags/}
-          echo "Extracted version: $version"
-          echo "version=$version" >> $GITHUB_OUTPUT
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            version=${GITHUB_REF#refs/tags/}
+            echo "Extracted version: $version"
+            echo "version=$version" >> $GITHUB_OUTPUT
+          else
+            echo "No tag found, using default version"
+            echo "version=0.0.0" >> $GITHUB_OUTPUT
+          fi
 
       - name: Get current date
         id: get_date
@@ -117,6 +86,19 @@ jobs:
           current_date=$(date -u +"%Y-%m-%d")
           echo "Current date: $current_date"
           echo "date=$current_date" >> $GITHUB_OUTPUT
+
+      - name: Get system architecture
+        id: get_arch
+        run: |
+          if [ "${{ matrix.target }}" == "x86_64-pc-windows-msvc" ]; then
+            arch="x86_64"
+          elif [ "${{ matrix.target }}" == "aarch64-linux-android" ]; then
+            arch="aarch64"
+          else
+            arch=$(uname -m)
+          fi
+          echo "System architecture: $arch"
+          echo "arch=$arch" >> $GITHUB_OUTPUT
 
       - name: Create Release via GitHub API
         id: create_release
@@ -135,10 +117,6 @@ jobs:
               \"draft\": false,
               \"prerelease\": false
             }")
-          if [ -z "$(echo "$response" | jq -r '.upload_url')" ]; then
-            echo "Failed to create release"
-            exit 1
-          fi
           upload_url=$(echo "$response" | jq -r '.upload_url' | sed 's/{.*}//')
           echo "upload_url=$upload_url" >> $GITHUB_OUTPUT
 
@@ -147,17 +125,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           upload_url=${{ steps.create_release.outputs.upload_url }}
-<<<<<<< HEAD
-          for target in x86_64-unknown-linux-gnu x86_64-pc-windows-msvc x86_64-apple-darwin aarch64-apple-darwin aarch64-linux-android; do
+          for target in x86_64-unknown-linux-gnu x86_64-pc-windows-msvc x86_64-apple-darwin aarch64-apple-darwin; do
             if [ "$target" == "x86_64-pc-windows-msvc" ]; then
-              asset_path="artifacts/${{ env.PROJECT_NAME }}-$target/${{ env.PROJECT_NAME }}.exe"
-              asset_name="${{ env.PROJECT_NAME }}-${{ steps.extract_version.outputs.version }}-${{ steps.get_date.outputs.date }}-$target.exe"
+              asset_path="artifacts/rust_project_arena-$target/rust_project_arena.exe"
             else
-              asset_path="artifacts/${{ env.PROJECT_NAME }}-$target/${{ env.PROJECT_NAME }}"
-              asset_name="${{ env.PROJECT_NAME }}-${{ steps.extract_version.outputs.version }}-${{ steps.get_date.outputs.date }}-$target"
+              asset_path="artifacts/rust_project_arena-$target/rust_project_arena"
             fi
 
             if [ -f "$asset_path" ]; then
+              asset_name="rust_project_arena-${{ steps.extract_version.outputs.version }}-${{ steps.get_date.outputs.date }}-$target"
+              if [ "$target" == "x86_64-pc-windows-msvc" ]; then
+                asset_name="$asset_name.exe"
+              fi
+
               echo "Uploading $asset_path as $asset_name"
               curl -s -X POST \
                 -H "Authorization: token $GITHUB_TOKEN" \
@@ -167,14 +147,4 @@ jobs:
             else
               echo "Warning: File $asset_path does not exist. Skipping upload for $target."
             fi
-=======
-          for target in x86_64-unknown-linux-gnu x86_64-pc-windows-msvc x86_64-apple-darwin aarch64-apple-darwin; do
-            asset_path="artifacts/${{ env.PROJECT_NAME }}-$target/${{ env.PROJECT_NAME }}${{ matrix.ext }}"
-            asset_name="${{ env.PROJECT_NAME }}-${{ steps.extract_version.outputs.version }}-${{ steps.get_date.outputs.date }}-$target${{ matrix.ext }}"
-            curl -s -X POST \
-              -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Content-Type: application/octet-stream" \
-              --data-binary @$asset_path \
-              "$upload_url?name=$asset_name"
->>>>>>> parent of aec8528 (Flx path for windows exe in Release)
           done
