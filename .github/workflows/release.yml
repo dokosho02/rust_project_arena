@@ -22,9 +22,16 @@ jobs:
             target: x86_64-apple-darwin
           - os: macos-latest
             target: aarch64-apple-darwin
+<<<<<<< HEAD
           - os: ubuntu-latest
             target: aarch64-linux-android
             use_cross: true # 标记使用 cross 工具
+=======
+            ext: ""
+          # - os: ubuntu-latest
+          #   target: aarch64-linux-android
+          #   ext: ""
+>>>>>>> parent of aec8528 (Flx path for windows exe in Release)
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,9 +43,28 @@ jobs:
           override: true
           target: ${{ matrix.target }}
 
+<<<<<<< HEAD
       - name: Install cross (if needed)
         if: matrix.use_cross
         run: cargo install cross
+=======
+      # - name: Install Android NDK (for Android target)
+      #   if: matrix.target == 'aarch64-linux-android'
+      #   run: |
+      #     # 下载 Android NDK
+      #     NDK_VERSION="25.2.9519653"
+      #     NDK_ZIP="android-ndk-r25b-linux.zip"
+      #     wget -q https://dl.google.com/android/repository/$NDK_ZIP
+
+      #     # 解压 NDK 到用户目录
+      #     mkdir -p $HOME/android-ndk
+      #     unzip -q $NDK_ZIP -d $HOME/android-ndk
+      #     rm $NDK_ZIP
+
+      #     # 设置环境变量
+      #     echo "ANDROID_NDK_HOME=$HOME/android-ndk/android-ndk-r25b" >> $GITHUB_ENV
+      #     echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+>>>>>>> parent of aec8528 (Flx path for windows exe in Release)
 
       - name: Build the project
         shell: bash
@@ -121,6 +147,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           upload_url=${{ steps.create_release.outputs.upload_url }}
+<<<<<<< HEAD
           for target in x86_64-unknown-linux-gnu x86_64-pc-windows-msvc x86_64-apple-darwin aarch64-apple-darwin aarch64-linux-android; do
             if [ "$target" == "x86_64-pc-windows-msvc" ]; then
               asset_path="artifacts/${{ env.PROJECT_NAME }}-$target/${{ env.PROJECT_NAME }}.exe"
@@ -140,4 +167,14 @@ jobs:
             else
               echo "Warning: File $asset_path does not exist. Skipping upload for $target."
             fi
+=======
+          for target in x86_64-unknown-linux-gnu x86_64-pc-windows-msvc x86_64-apple-darwin aarch64-apple-darwin; do
+            asset_path="artifacts/${{ env.PROJECT_NAME }}-$target/${{ env.PROJECT_NAME }}${{ matrix.ext }}"
+            asset_name="${{ env.PROJECT_NAME }}-${{ steps.extract_version.outputs.version }}-${{ steps.get_date.outputs.date }}-$target${{ matrix.ext }}"
+            curl -s -X POST \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary @$asset_path \
+              "$upload_url?name=$asset_name"
+>>>>>>> parent of aec8528 (Flx path for windows exe in Release)
           done
